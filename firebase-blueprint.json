@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with spiritual preferences, tradition, and accessibility settings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated Firebase User ID" },
+        "displayName": { "type": "string", "description": "Display name of the practitioner" },
+        "preferredLanguage": { "type": "string", "description": "User language code (en, hi, kn, ta, te)" },
+        "stateRegion": { "type": "string", "description": "Regional tradition state (e.g. Karnataka, Uttar Pradesh)" },
+        "cityName": { "type": "string", "description": "Current city for local Drik Panchang" },
+        "calendarConvention": { "type": "string", "description": "Amanta, Purnimanta, or Solar" },
+        "defaultRoutineMins": { "type": "integer", "description": "Daily routine duration (5, 10, 15, 30 mins)" },
+        "seniorAccessibleMode": { "type": "boolean", "description": "High-contrast large-font senior accessibility flag" },
+        "familyTraditionNote": { "type": "string", "description": "Optional notes on family custom or deity practices" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of creation via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of last update via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "displayName", "preferredLanguage", "stateRegion", "cityName", "calendarConvention", "defaultRoutineMins", "seniorAccessibleMode", "createdAt", "updatedAt"]
+    },
+    "PoojaCompletion": {
+      "title": "PoojaCompletion",
+      "description": "Record of a completed daily or festival pooja session.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "poojaSlug": { "type": "string", "description": "Identifier for the completed pooja" },
+        "poojaTitle": { "type": "string", "description": "Title of the pooja" },
+        "durationSeconds": { "type": "integer", "description": "Duration spent in seconds" },
+        "personalReflection": { "type": "string", "description": "Optional reflection note" },
+        "completedAt": { "type": "string", "format": "date-time", "description": "Completion timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "poojaSlug", "poojaTitle", "durationSeconds", "completedAt"]
+    },
+    "PoojaSchedule": {
+      "title": "PoojaSchedule",
+      "description": "Configured recurring schedule for household rituals.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "poojaSlug": { "type": "string", "description": "Pooja identifier" },
+        "timeOfDay": { "type": "string", "description": "Time string e.g. 06:15" },
+        "recurrenceRule": { "type": "string", "description": "DAILY, EKADASHI, PRADOSHAM, etc." },
+        "isActive": { "type": "boolean", "description": "Whether the schedule reminder is active" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "poojaSlug", "timeOfDay", "recurrenceRule", "isActive", "createdAt", "updatedAt"]
+    },
+    "DisciplineProgress": {
+      "title": "DisciplineProgress",
+      "description": "Progress tracking across Gurukul human discipline pathways.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "pathwaySlug": { "type": "string", "description": "Pathway slug identifier" },
+        "pathwayTitle": { "type": "string", "description": "Name of the pathway" },
+        "currentDay": { "type": "integer", "description": "Current day number in sequence" },
+        "streakDays": { "type": "integer", "description": "Current consecutive streak days" },
+        "lastCompletedAt": { "type": "string", "format": "date-time", "description": "Timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "pathwaySlug", "pathwayTitle", "currentDay", "streakDays", "lastCompletedAt"]
+    },
+    "ProblemSubmission": {
+      "title": "ProblemSubmission",
+      "description": "Encrypted personal problem guidance record with practical referrals.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "domain": { "type": "string", "description": "Domain of concern" },
+        "userNote": { "type": "string", "description": "Private note from the user" },
+        "practicalReferrals": { "type": "string", "description": "Verified helpline or practical action guidance" },
+        "optionalDevotionalPractice": { "type": "string", "description": "Non-harmful optional meditation or devotional comfort" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "domain", "userNote", "practicalReferrals", "optionalDevotionalPractice", "createdAt"]
+    },
+    "CeremonyBooking": {
+      "title": "CeremonyBooking",
+      "description": "Verified booking of a Purohit ceremony with transparent fee ledger.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "practitionerId": { "type": "string", "description": "Assigned practitioner ID" },
+        "practitionerName": { "type": "string", "description": "Name of the Pandit/Scholar" },
+        "ceremonyTitle": { "type": "string", "description": "Ceremony requested" },
+        "scheduledDate": { "type": "string", "description": "Scheduled date string" },
+        "totalAmountInr": { "type": "integer", "description": "Transparent total fee in INR" },
+        "status": { "type": "string", "description": "Booking status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "practitionerId", "practitionerName", "ceremonyTitle", "scheduledDate", "totalAmountInr", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and tradition settings document"
+    },
+    "/users/{userId}/pooja_completions/{completionId}": {
+      "schema": { "$ref": "#/entities/PoojaCompletion" },
+      "description": "Completed pooja records for the user"
+    },
+    "/users/{userId}/schedules/{scheduleId}": {
+      "schema": { "$ref": "#/entities/PoojaSchedule" },
+      "description": "Configured recurring pooja schedules"
+    },
+    "/users/{userId}/discipline_progress/{progressId}": {
+      "schema": { "$ref": "#/entities/DisciplineProgress" },
+      "description": "Progress in Gurukul discipline and dincharya pathways"
+    },
+    "/users/{userId}/problem_guidance/{submissionId}": {
+      "schema": { "$ref": "#/entities/ProblemSubmission" },
+      "description": "Personal guidance submissions and verified referrals"
+    },
+    "/users/{userId}/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/CeremonyBooking" },
+      "description": "Ceremony bookings with verified practitioners"
+    }
+  }
+}

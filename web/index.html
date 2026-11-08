@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sacred Geography & Tirtha Yatra Atlas</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Google Fonts: Cormorant Garamond & Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Cormorant Garamond', serif;
+      background: #FFFBF5;
+      color: #2C1810;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      background: #4A0E17;
+      color: #FFFBF5;
+      padding: 12px 16px;
+      border-bottom: 2px solid #D4AF37;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 1001;
+    }
+    .header-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .title-group h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      color: #FFFBF5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .title-group h1 span.om {
+      color: #D4AF37;
+      font-size: 1.4rem;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: rgba(255,251,245, 0.85);
+      margin-top: 2px;
+    }
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .filter-btn {
+      background: rgba(255,255,255,0.12);
+      color: #FFFBF5;
+      border: 1px solid rgba(212,175,55,0.4);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .filter-btn.active {
+      background: #D4AF37;
+      color: #4A0E17;
+      border-color: #D4AF37;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+    .filter-btn.active.shakti {
+      background: #C2185B;
+      color: #FFFBF5;
+      border-color: #FF80AB;
+    }
+    .search-row {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .search-input {
+      flex: 1;
+      max-width: 400px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(212,175,55,0.6);
+      background: rgba(255,255,255,0.15);
+      color: #FFFBF5;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+    .search-input::placeholder { color: rgba(255,255,255,0.6); }
+    .search-input:focus { outline: none; border-color: #D4AF37; background: rgba(255,255,255,0.25); }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Floating Detail Card */
+    .detail-card {
+      position: absolute;
+      top: 90px;
+      right: 16px;
+      width: 360px;
+      max-width: calc(100% - 32px);
+      max-height: calc(100% - 140px);
+      background: #FFFBF5;
+      border: 2px solid #D4AF37;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      padding: 16px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .detail-card .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .badge-jyo { background: #FFF8E1; color: #B78103; border: 1px solid #FFE082; }
+    .badge-sp { background: #FCE4EC; color: #AD1457; border: 1px solid #F48FB1; }
+    .close-btn {
+      float: right;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #888;
+    }
+    .close-btn:hover { color: #2C1810; }
+    .detail-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      color: #4A0E17;
+      margin-top: 4px;
+    }
+    .detail-loc {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .section-divider {
+      border-top: 1px solid #E0D7C6;
+      margin: 10px 0;
+    }
+    .detail-field { margin-bottom: 8px; font-size: 0.85rem; line-height: 1.35; }
+    .detail-field strong { color: #4A0E17; font-size: 0.8rem; text-transform: uppercase; display: block; }
+    .mantra-box {
+      background: #4A0E17;
+      color: #FFFBF5;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+    .mantra-label {
+      font-size: 0.7rem;
+      color: #D4AF37;
+      text-transform: uppercase;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .nav-btn {
+      display: block;
+      background: #D4AF37;
+      color: #4A0E17;
+      font-weight: bold;
+      text-align: center;
+      padding: 8px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      transition: background 0.2s;
+    }
+    .nav-btn:hover { background: #C59F2A; }
+
+    .audio-tour-btn {
+      background: #4A0E17;
+      color: #FFFBF5;
+      border: 1px solid #D4AF37;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .audio-tour-btn:hover {
+      background: #681421;
+      border-color: #FFFBF5;
+    }
+    .audio-tour-btn.speaking {
+      background: #C2185B;
+      border-color: #FF80AB;
+      color: #FFFBF5;
+      box-shadow: 0 0 10px rgba(194,24,91,0.6);
+    }
+
+    /* Custom Leaflet Marker Styling */
+    .sacred-marker-icon {
+      position: relative;
+      width: 32px;
+      height: 32px;
+    }
+    .sacred-pin {
+      width: 30px;
+      height: 30px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+    }
+    .pin-jyo {
+      background: #D4AF37;
+      border: 2px solid #4A0E17;
+    }
+    .pin-sp {
+      background: #C2185B;
+      border: 2px solid #FFFBF5;
+    }
+    .pin-symbol {
+      transform: rotate(45deg);
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    footer {
+      background: #4A0E17;
+      color: rgba(255,251,245,0.85);
+      padding: 6px 16px;
+      font-size: 0.75rem;
+      border-top: 1px solid #D4AF37;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1001;
+    }
+    footer span.highlight { color: #D4AF37; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-top">
+      <div class="title-group">
+        <h1><span class="om">ॐ</span> Sacred Geography & Tirtha Yatra Atlas</h1>
+        <p class="subtitle">Canonical Sacred Sites: 12 Dwadasha Jyotirlingas & 51 Maha Shakti Peethas</p>
+      </div>
+
+      <div class="filter-bar">
+        <button id="btn-geo" class="filter-btn" style="background: linear-gradient(135deg, #D4AF37, #F59E0B); color: #4A0E17; font-weight: bold; border-color: #D4AF37;" onclick="findClosestTirthas()">📍 Find 3 Closest Tirthas</button>
+        <button id="btn-all" class="filter-btn active" onclick="setFilter('ALL')">All Tirthas (63)</button>
+        <button id="btn-jyo" class="filter-btn" onclick="setFilter('JYOTIRLINGA')">🔱 12 Jyotirlingas</button>
+        <button id="btn-sp" class="filter-btn shakti" onclick="setFilter('SHAKTI_PEETHA')">🌺 51 Shakti Peethas</button>
+      </div>
+    </div>
+
+    <div class="search-row">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        placeholder="Search temple, state, deity, or Sati body part (e.g. Kedarnath, Assam, Eyes)..."
+        oninput="handleSearch(this.value)"
+      />
+      <span id="siteCount" style="font-size: 0.75rem; color: #D4AF37; margin-left: auto;">Showing 63 sites</span>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <!-- Detail Card Drawer -->
+  <div id="detailCard" class="detail-card">
+    <button class="close-btn" onclick="closeDetailCard()">✕</button>
+    <span id="detailBadge" class="badge"></span>
+    <h2 id="detailTitle" class="detail-title"></h2>
+    <div id="detailLoc" class="detail-loc"></div>
+
+    <div class="section-divider"></div>
+
+    <div class="detail-field">
+      <strong>Presiding Deity</strong>
+      <span id="detailDeity"></span>
+    </div>
+
+    <div id="detailBhairavBox" class="detail-field">
+      <strong>Associated Bhairava / Consort</strong>
+      <span id="detailBhairav"></span>
+    </div>
+
+    <div id="detailSignificanceBox" class="detail-field" style="background: #FFF8E1; padding: 6px 8px; border-radius: 6px; border-left: 3px solid #D4AF37;">
+      <strong style="color: #B78103;">Sati Anga / Sacred Significance</strong>
+      <span id="detailSignificance"></span>
+    </div>
+
+    <div class="detail-field">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <strong style="margin-bottom: 0;">Sthala Purana & History</strong>
+        <button id="audioTourBtn" class="audio-tour-btn" onclick="toggleAudioTour()" title="Read Sthala Purana history aloud using Web Speech API">
+          <span id="audioTourIcon">🔊</span>
+          <span id="audioTourText">Audio Tour</span>
+        </button>
+      </div>
+      <span id="detailPurana"></span>
+    </div>
+
+    <div class="detail-field">
+      <strong>Canonical Textual Authority</strong>
+      <span id="detailSource" style="font-style: italic;"></span>
+    </div>
+
+    <div class="detail-field">
+      <strong>Architecture & Historical Era</strong>
+      <span id="detailArch"></span>
+    </div>
+
+    <div class="mantra-box">
+      <span class="mantra-label">Recommended Mantra / Chanting</span>
+      <span id="detailMantra"></span>
+    </div>
+
+    <div class="detail-field" style="margin-top: 8px;">
+      <strong>Pilgrim Accessibility & Senior Support</strong>
+      <span id="detailAccess"></span>
+    </div>
+
+    <a id="detailNavBtn" href="#" target="_blank" class="nav-btn">Navigate with Google Maps ↗</a>
+  </div>
+
+  <!-- Closest Tirthas Modal -->
+  <div id="closestModal" class="detail-card" style="left: 16px; right: auto; top: 90px; border-color: #D4AF37;">
+    <button class="close-btn" onclick="closeClosestModal()">✕</button>
+    <span class="badge" style="background:#FFF8E1; color:#B78103; border:1px solid #FFE082;">📍 Nearest Pilgrimage Sites</span>
+    <h2 class="detail-title" style="margin-top:4px;">3 Closest Sacred Tirthas</h2>
+    <div id="closestGpsInfo" class="detail-loc"></div>
+    <div class="section-divider"></div>
+    <div id="closestList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+  </div>
+
+  <footer>
+    <div>🔱 12 Dwadasha Jyotirlingas • 🌺 51 Maha Shakti Peethas</div>
+    <div>SATYA Guarantee: <span class="highlight">100% Scriptural Fidelity & Zero Fear-Based Extortion</span></div>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    // Initialize Map centered on Indian Subcontinent
+    const map = L.map('map', {
+      center: [22.9734, 78.6569],
+      zoom: 5,
+      minZoom: 3,
+      maxZoom: 18
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Tirtha Data embedded
+    const TIRTHAS = [
+      // 12 Jyotirlingas
+      { id:'j1', name:'Somnath Jyotirlinga', cat:'JYOTIRLINGA', lat:20.8880, lng:70.4012, state:'Gujarat', loc:'Veraval, Prabhas Patan', deity:'Lord Somnath (Chandra-worshipped)', bhairav:'Goddess Chandrabhaga', sig:'First of the 12 Jyotirlingas, symbolizing eternal resurrection and healing from Chandra’s curse.', source:'Shiva Purana (Koti Rudra Samhita, Ch. 14)', arch:'Chalukya/Solanki Kailash Mahameru Prasad', era:'Ancient; Sardar Patel rebuilt (1951 CE)', purana:'Chandra was cursed by Daksha and lost his lustre; he immersed here at Triveni Sangam and Lord Shiva freed him.', mantra:'ॐ नमः शिवाय । सौराष्ट्रे सोमनाथं च श्रीशैले मल्लिकार्जुनम् ॥', access:'Wheelchair ramps, battery carts, senior lane.' },
+      { id:'j2', name:'Mallikarjuna Jyotirlinga', cat:'JYOTIRLINGA', lat:16.0740, lng:78.8687, state:'Andhra Pradesh', loc:'Srisailam, Nallamala Hills', deity:'Lord Mallikarjuna & Goddess Bhramaramba', bhairav:'Bhramarambika (Also Shakti Peetha)', sig:'Dual sanctum of Jyotirlinga and Maha Shakti Peetha on the sacred Sriparvata.', source:'Shiva Purana & Mahabharata (Vana Parva)', arch:'Kakatiya & Vijayanagara Dravidian', era:'Satavahanas, Kakatiyas, Krishnadevaraya', purana:'Mahadeva and Parvati manifested to console Kartikeya who resided here after circumambulating the cosmos.', mantra:'श्रीशैले मल्लिकार्जुनं । ॐ नमः शिवाय ॥', access:'Motorized wheelchairs, lift to queue complex.' },
+      { id:'j3', name:'Mahakaleshwar Jyotirlinga', cat:'JYOTIRLINGA', lat:23.1827, lng:75.7682, state:'Madhya Pradesh', loc:'Ujjain, Kshipra River', deity:'Lord Mahakal (Dakshinabhimukhi)', bhairav:'Maa Harsiddhi', sig:'Supreme Master of Time and Death (Kala-Jaya); only South-facing Jyotirlinga.', source:'Shiva Purana & Kalidasa’s Meghaduta', arch:'Bhumija & Maratha style', era:'Paramaras (11th c.) & General Ranoji Shinde (1734 CE)', purana:'Lord Shiva shattered the earth to destroy demon Dushana and protect Vedic practitioners of Avanti.', mantra:'उज्जयिन्यां महाकालम् । ॐ त्र्यम्बकं यजामहे ॥', access:'Mahakal Lok corridor, mechanized lifts for elderly, Bhasma Aarti senior queue.' },
+      { id:'j4', name:'Omkareshwar & Mamleshwar', cat:'JYOTIRLINGA', lat:22.2464, lng:76.1517, state:'Madhya Pradesh', loc:'Mandhata Island, Narmada River', deity:'Lord Omkareshwar & Amaleshwar', bhairav:'Goddess Annapurna & Narmada', sig:'Sacred island shaped naturally like the primordial symbol ॐ (AUM).', source:'Shiva Purana & Narmada Purana', arch:'Nagara style with carved sandstone balconies', era:'Mandhata dynasty & Maharani Ahilyabai Holkar', purana:'King Mandhata performed penance here, and Mount Meru prayed to Shiva to reside eternally.', mantra:'ॐकारममलेश्वरम् । ॐ नमः प्रणवस्वरूपिणे शिवाय नमः ॥', access:'Suspension bridge with battery cart transport, life-jacket boats.' },
+      { id:'j5', name:'Kedarnath Jyotirlinga', cat:'JYOTIRLINGA', lat:30.7352, lng:79.0669, state:'Uttarakhand', loc:'Rudraprayag, Garhwal Himalayas (3,583m)', deity:'Lord Kedaranatha', bhairav:'Bhairavnath temple atop ridge', sig:'Highest Jyotirlinga nestled amidst glaciers; prime seat of northern Shaivism.', source:'Mahabharata & Skanda Purana (Kedara Khanda)', arch:'Katyuri Himalayan Stone Architecture', era:'Attributed to Pandavas; Adi Shankaracharya samadhi (8th c.)', purana:'Pandavas sought atonement from Shiva; Mahadeva dove into the earth, leaving his hump at Kedarnath.', mantra:'हिमाद्रौ तु केदारम् । ॐ नमः शिवाय शम्भवे केदारनाथाय नमः ॥', access:'Helicopter services from Guptkashi/Phata, Doli/palanquin and pony assistance.' },
+      { id:'j6', name:'Bhimashankar Jyotirlinga', cat:'JYOTIRLINGA', lat:19.0722, lng:73.5358, state:'Maharashtra', loc:'Sahyadri Range near Pune', deity:'Lord Bhimashankar (Origin of Bhima River)', bhairav:'Goddess Kamalaja Mata', sig:'Symbol of invincible courage overcoming demonic tyrant Bhima.', source:'Shiva Purana & Linga Purana', arch:'Hemadpanthi stone masonry with carved shikhara', era:'Nana Fadnavis and Peshwa rulers (18th c.)', purana:'Lord Shiva manifested to destroy asura Bhima who tried to sever King Kamrupeshwar’s Shivalinga worship.', mantra:'डाकिन्यां भीमशङ्करम् । ॐ नमः शिवाय ॥', access:'Paved stairs with handrails, palanquin bearers for elderly pilgrims.' },
+      { id:'j7', name:'Kashi Vishwanath Jyotirlinga', cat:'JYOTIRLINGA', lat:25.3109, lng:83.0107, state:'Uttar Pradesh', loc:'Varanasi, Ganga River', deity:'Lord Vishwanath & Goddess Annapurna', bhairav:'Kaal Bhairav & Goddess Vishalakshi', sig:'Cosmic axis (Avimukta Kshetra) granting Moksha to all departing souls.', source:'Kashi Khanda (Skanda Purana)', arch:'Nagara style with golden domes (Maharaja Ranjit Singh 1839)', era:'Reconstructed by Ahilyabai Holkar (1780 CE), Vishwanath Corridor (2021 CE)', purana:'The primordial pillar of cosmic light that pierces through earth and heaven where Brahma & Vishnu searched.', mantra:'वाराणस्यां तु विश्वेशम् । ॐ नमः शिवाय काशीविश्वनाथाय नमः ॥', access:'Spacious flat Vishwanath Dham corridor, golf carts from Ghats, escalators.' },
+      { id:'j8', name:'Trimbakeshwar Jyotirlinga', cat:'JYOTIRLINGA', lat:19.9324, lng:73.5307, state:'Maharashtra', loc:'Brahmagiri Hill, Nashik', deity:'Trimbakeshwar (Tri-Murti: Brahma, Vishnu, Rudra)', bhairav:'Goddess Ganga (Godavari source)', sig:'Only Jyotirlinga with a three-faced lingam representing the Holy Trinity.', source:'Shiva Purana & Padma Purana', arch:'Basalt stone Hemadpanthi architecture', era:'Peshwa Balaji Baji Rao (1755–1786 CE)', purana:'Sage Gautama prayed to Lord Shiva to release river Ganga (Godavari) to sanctify the realm.', mantra:'त्र्यम्बकं गौतमीतटे । ॐ नमः शिवाय त्र्यम्बकेश्वराय नमः ॥', access:'Flat courtyard, special senior line passes.' },
+      { id:'j9', name:'Baidyanath Jyotirlinga', cat:'JYOTIRLINGA', lat:24.4925, lng:86.7001, state:'Jharkhand', loc:'Deoghar (Chita Bhumi)', deity:'Lord Vaidyanatha (The Supreme Physician)', bhairav:'Goddess Jaya Durga (Shakti Peetha)', sig:'Healer of all worldly suffering, disease, and inner anguish.', source:'Shiva Purana & Ramayana Uttara Kanda', arch:'Lotus-shaped stone spire with Panchashoola', era:'Ancient; patronized by Chola, Pala, and Birbal kings', purana:'Ravana offered his 10 heads to please Shiva; Shiva manifested as Vaidya (physician) to heal him.', mantra:'वैद्यनाथं चिताभूमौ । ॐ वैद्यनाथाय नमः ॥', access:'VIP senior darshan pass, direct vehicular drop-off.' },
+      { id:'j10', name:'Nageshwar Jyotirlinga', cat:'JYOTIRLINGA', lat:22.3344, lng:69.0911, state:'Gujarat', loc:'Near Dwarka (Darukavana)', deity:'Lord Nageshwara', bhairav:'Goddess Nageshwari', sig:'Protection from all worldly poisons, fears, and psychic malevolence.', source:'Shiva Purana (Koti Rudra Samhita, Ch. 29)', arch:'Modernized Nagara with 85-foot giant meditative Shiva statue', era:'Puranic; refurbished by T-Series Trust', purana:'Devotee Supriya was imprisoned by demon Daruka; Lord Shiva broke through the stone to save him.', mantra:'नागेशं दारुकावने । ॐ नमः शिवाय नागेश्वराय नमः ॥', access:'Completely flat single-level marble precinct; 100% wheelchair friendly.' },
+      { id:'j11', name:'Ramanathaswamy Jyotirlinga', cat:'JYOTIRLINGA', lat:9.2881, lng:79.3174, state:'Tamil Nadu', loc:'Rameswaram Island', deity:'Lord Ramanathaswamy (Linga consecrated by Sri Rama)', bhairav:'Goddess Parvathavarthini', sig:'Southernmost Jyotirlinga; site where Sri Rama worshipped Shiva before Sethu Bandhana.', source:'Valmiki Ramayana, Shiva Purana & Skanda Purana', arch:'Pure Dravidian Architecture with 1,212 carved stone pillars', era:'Pandya kings (12th c.) & Sethupathi rulers of Ramnad', purana:'Sri Rama installed the sand Linga made by Sita Devi to cleanse the sin of slaying Ravana.', mantra:'सेतुबन्धे तु रामेशम् । ॐ नमः शिवाय रामनाथाय नमः ॥', access:'Battery carts from parking, flat ground corridors, ramped gopurams.' },
+      { id:'j12', name:'Grishneshwar Jyotirlinga', cat:'JYOTIRLINGA', lat:20.0249, lng:75.1706, state:'Maharashtra', loc:'Verul (Ellora Caves)', deity:'Lord Grishneshwar (Lord of Boundless Compassion)', bhairav:'Goddess Kusumeshwari', sig:'Twelfth Jyotirlinga, celebrated for compassion towards the devout Kusuma.', source:'Shiva Purana (Ch. 32–33)', arch:'Red sandstone South-Indian Nagara style with 5-tier Shikhara', era:'Maloji Raje Bhosale (16th c.) & Maharani Ahilyabai Holkar', purana:'Kusuma immersed Shivalingas in a pond daily; when her son was murdered, her devotion brought him back to life.', mantra:'घुश्मेशं च शिवालये । ॐ नमः शिवाय घुश्मेश्वराय नमः ॥', access:'Spacious stone courtyard, calm queues, step-free access.' },
+
+      // 51 Shakti Peethas
+      { id:'s1', name:'Kamakhya Temple', cat:'SHAKTI_PEETHA', lat:26.1664, lng:91.7056, state:'Assam', loc:'Nilachal Hill, Guwahati', deity:'Goddess Kamakhya (Mahamaya)', bhairav:'Umananda Bhairava', sig:'Yoni Peetha (Creative source & fertility of Mother Earth; Ambubachi seat).', source:'Kalika Purana & Yogini Tantra', arch:'Nilachal style (cruciform base & beehive dome)', era:'Rebuilt by King Naranarayana (1565 CE)', purana:'The Yoni (womb/creative matrix) of Devi Sati fell here as Sudarshana Chakra divided her form.', mantra:'कामाख्ये कामसम्पन्ने कामेश्वरि हरप्रिये । नमोऽस्तु ते ॥', access:'Dedicated senior citizen queue, elevator to Natmandir.' },
+      { id:'s2', name:'Kalighat Kali Temple', cat:'SHAKTI_PEETHA', lat:22.5204, lng:88.3426, state:'West Bengal', loc:'Kolkata, Adi Ganga canal', deity:'Goddess Kalika', bhairav:'Nakuleshwar Bhairava', sig:'Right Toes of Devi Sati.', source:'Tantrachudamani & Kalika Purana', arch:'Bengal Chala architecture with curved cornices', era:'Sabarna Roy Choudhury (1809 CE)', purana:'The four toes of Sati’s right foot fell here beside the sacred stream of Bhagirathi-Hooghly.', mantra:'ॐ क्रीं कालिकायै नमः ॥', access:'Covered VIP entry, paved lanes with trust assistance.' },
+      { id:'s3', name:'Tarapith Temple', cat:'SHAKTI_PEETHA', lat:24.1147, lng:87.7981, state:'West Bengal', loc:'Birbhum, Dwarka River', deity:'Maa Tara (Ugra Tara)', bhairav:'Chandrachur Bhairava (Bamakhepa seat)', sig:'Third Eye / Eyeball (Nayan Tara) of Sati.', source:'Tantrachudamani & Shiva Charita', arch:'At-chala terracotta brick temple', era:'Jagannath Ray (1818 CE)', purana:'Sage Vashistha and avatar Bamakhepa achieved spiritual perfection meditating on Maa Tara here.', mantra:'ॐ ह्रीं स्त्रीं हुं फट् ॥', access:'Step-free entrance ramps, orderly courtyard.' },
+      { id:'s4', name:'Bakreshwar Shakti Peetha', cat:'SHAKTI_PEETHA', lat:23.8828, lng:87.3719, state:'West Bengal', loc:'Birbhum', deity:'Maa Mahishamardini', bhairav:'Vakranath Bhairava', sig:'Center of Eyebrows / Mind (Ajna Chakra).', source:'Devi Bhagavata & Tantrachudamani', arch:'Bengali Rekha Deul with thermal springs', era:'Medieval foundations over classical Tantric site', purana:'Sage Ashtavakra cured of eight bodily deformities by worshipping Shiva and Shakti here.', mantra:'ॐ ऐं ह्रीं क्लीं चामुण्डायै विच्चे ॥', access:'Thermal bath walkways, peaceful flat grounds.' },
+      { id:'s5', name:'Biraja Temple (Jajpur)', cat:'SHAKTI_PEETHA', lat:20.8497, lng:86.3344, state:'Odisha', loc:'Jajpur, Vaitarani River', deity:'Goddess Biraja (Dwibhuja Mahishasuramardini)', bhairav:'Varaha / Ishaneshwar Bhairava', sig:'Navel (Nabhi Peetha).', source:'Mahabharata (Vana Parva) & Skanda Purana', arch:'Kalinga Architecture with Rekha Vimana', era:'Somavamshi & Bhauma-Kara Dynasties (10th c.)', purana:'Brahma performed a great Vedic yajna here, from which Goddess Biraja manifested.', mantra:'ॐ ह्रीं श्रीं बिराजायै नमः ॥', access:'Wide parikrama path, temple volunteer priority.' },
+      { id:'s6', name:'Tara Tarini Shakti Peetha', cat:'SHAKTI_PEETHA', lat:19.4912, lng:84.8997, state:'Odisha', loc:'Rushikulya River, Ganjam', deity:'Twin Goddesses Tara & Tarini', bhairav:'Tumbeshwar Bhairava', sig:'Breasts (Sthana Peetha) of Sati.', source:'Kalika Purana & Tantrachudamani', arch:'Modernized Kalinga style atop Purnagiri Hill', era:'Revered by ancient Kalinga maritime navigators', purana:'Goddesses granted prosperity to ancient merchants venturing across the seas.', mantra:'ॐ ह्रीं श्रीं तारातारिणीभ्यां नमः ॥', access:'Ropeway cable car directly to hilltop.' },
+      { id:'s7', name:'Jwalamukhi Temple', cat:'SHAKTI_PEETHA', lat:31.8790, lng:76.3235, state:'Himachal Pradesh', loc:'Kangra Valley', deity:'Maa Jwalamukhi (Nine Eternal Flames)', bhairav:'Unmatta Bhairava', sig:'Tongue (Jihwa Peetha) of Devi Sati.', source:'Skanda Purana & Tantrachudamani', arch:'Indo-Sikh dome with golden cupola gifted by Ranjit Singh', era:'Patronized by Katoch kings and Akbar', purana:'Devi’s tongue fell into the fissure, manifesting as eternal self-ignited natural flames.', mantra:'ॐ ज्वालामुखि सर्वशत्रून् भक्षय भक्षय हुं फट् ॥', access:'Gradual ramps, wheelchairs, orderly sanctum queue.' },
+      { id:'s8', name:'Naina Devi Temple', cat:'SHAKTI_PEETHA', lat:31.3060, lng:76.5385, state:'Himachal Pradesh', loc:'Bilaspur, Shivalik Hills', deity:'Maa Naina Devi', bhairav:'Kapalika Bhairava', sig:'Eyes (Netra Peetha) of Sati.', source:'Tantrachudamani & Shiva Charita', arch:'Traditional hill temple pavilion style', era:'Raja Bir Chand (8th c. CE)', purana:'Devi’s eyes fell upon this scenic hill overlooking Govind Sagar lake.', mantra:'ॐ नयनायै नमः ॥', access:'Ropeway directly ascending to temple portal.' },
+      { id:'s9', name:'Chintpurni (Chhinnamastika)', cat:'SHAKTI_PEETHA', lat:31.6436, lng:76.1080, state:'Himachal Pradesh', loc:'Una, Bharwain Range', deity:'Maa Chhinnamastika / Chintpurni', bhairav:'Rudra Mahabhairava', sig:'Feet / Forehead (Dispeller of all worries & mental knots).', source:'Markandeya Purana', arch:'Pahari wooden and stone temple complex', era:'Pandit Mai Das (15th c. CE)', purana:'The Goddess relieves all inner mental tensions (Chinta) of genuine seekers.', mantra:'ॐ श्रीं ह्रीं क्लीं ऐं वज्र वैरोचनीये हुं हुं फट् ॥', access:'Electric cart service along temple bazaar.' },
+      { id:'s10', name:'Chamunda Devi (Kangra)', cat:'SHAKTI_PEETHA', lat:32.1648, lng:76.4172, state:'Himachal Pradesh', loc:'Dharamsala, Baner River', deity:'Maa Chamunda', bhairav:'Bhaneshwar Bhairava', sig:'Cosmic Armor & Crown.', source:'Durga Saptashati (Ch. 7)', arch:'Wood and slate Himalayan sanctuary', era:'Ancient roots; renovated 400 years ago', purana:'Kali emerged from Durga’s forehead to destroy demonic generals Chanda and Munda.', mantra:'ॐ ऐं ह्रीं क्लीं चामुण्डायै विच्चे ॥', access:'Direct motorable access, flat forecourt.' },
+      { id:'s11', name:'Vaishno Devi', cat:'SHAKTI_PEETHA', lat:33.0308, lng:74.9490, state:'Jammu & Kashmir', loc:'Trikuta Mountain, Katra (1,585m)', deity:'Maha Kali, Maha Lakshmi & Maha Saraswati (Pindis)', bhairav:'Bhairavnath (Top Peak)', sig:'Right Arm / Forehead (Union of Sattva, Rajas, Tamas in pure devotion).', source:'Durga Saptashati & Skanda Purana', arch:'Natural cave shrine integrated with high-tech corridors', era:'SMVDSB (since 1986)', purana:'Vaishnavi meditated in the cave and manifested as the three divine eternal Pindis.', mantra:'ॐ ऐं ह्रीं क्लीं महालक्ष्म्यै नमः ॥', access:'Battery car track (Himkoti), ropeway, helicopter, palanquins.' },
+      { id:'s12', name:'Amarnath Mahamaya Peetha', cat:'SHAKTI_PEETHA', lat:34.2157, lng:75.5038, state:'Jammu & Kashmir', loc:'Lidder Valley, Anantnag (3,888m)', deity:'Goddess Mahamaya & Holy Ice Lingam', bhairav:'Trisandhyeshwar Bhairava', sig:'Throat (Kanta Peetha) of Sati.', source:'Nilamata Purana & Rajatarangini', arch:'Vast natural Himalayan limestone cavern', era:'Documented since 1st millennium BCE', purana:'Lord Shiva revealed the eternal Amar Katha (secret of immortality) to Parvati.', mantra:'ॐ महामायायै नमः ॥', access:'Helicopter to Panjtarni, palanquin & medical posts.' },
+      { id:'s13', name:'Sharada Peeth', cat:'SHAKTI_PEETHA', lat:34.7892, lng:73.9789, state:'Kashmir (POK / Line of Control)', loc:'Neelum Valley, Kishanganga River', deity:'Goddess Sharada (Supreme Knowledge & Script)', bhairav:'Mahasaraswati Bhairava', sig:'Right Hand / Crown of Speech (Jnana Peetha).', source:'Rajatarangini & Shankara Digvijaya', arch:'Classical Kashmiri stone peristyle courtyard', era:'Mauryan era to Adi Shankaracharya’s ascent', purana:'Foremost university-temple where Vedic scholars tested their treaties.', mantra:'नमस्ते शारदे देवि काश्मीरपुरवासिनि । विद्यादानं च देहि मे ॥', access:'Historic temple; Teetwal temple opened at border.' },
+      { id:'s14', name:'Guhyeshwari Temple', cat:'SHAKTI_PEETHA', lat:27.7107, lng:85.3533, state:'Nepal', loc:'Kathmandu near Pashupatinath', deity:'Goddess Guhyeshwari', bhairav:'Kapali Bhairava (Pashupatinath)', sig:'Both Knees of Devi Sati.', source:'Tantrachudamani & Himavatkhanda', arch:'Traditional Newari Pagoda Architecture', era:'King Pratap Malla (1654 CE)', purana:'Devi’s knees fell near the holy Bagmati, forming the protective counterpart to Lord Pashupatinath.', mantra:'ॐ गुह्येश्वर्यै नमः ॥', access:'Direct stone path from Pashupatinath bridge.' },
+      { id:'s15', name:'Gandaki Muktinath Peetha', cat:'SHAKTI_PEETHA', lat:28.8170, lng:83.8718, state:'Nepal', loc:'Mustang, Thorong La Base (3,710m)', deity:'Goddess Gandaki Chandi', bhairav:'Chakrapani Bhairava', sig:'Forehead / Cheek of Sati.', source:'Devi Bhagavata & Varaha Purana', arch:'Three-tiered Pagoda with 108 brass spouts', era:'Ancient Shaligrama river source', purana:'Origin of sacred Saligrama stones in the holy Gandaki River.', mantra:'ॐ गण्डकीचण्ड्यै नमः ॥', access:'Jeep road to Muktinath gate.' },
+      { id:'s16', name:'Mansarovar (Manasa Peetha)', cat:'SHAKTI_PEETHA', lat:30.6690, lng:81.4720, state:'Tibet', loc:'Lake Mansarovar (4,590m)', deity:'Goddess Dakshayani', bhairav:'Amar Bhairava', sig:'Right Hand of Devi Sati.', source:'Tantrachudamani & Skanda Purana', arch:'Natural sacred high-altitude lake', era:'Rigvedic antiquity; Kailash Yatra', purana:'Sati’s right hand fell into the crystal turquoise waters reflecting Mount Kailash.', mantra:'ॐ दाक्षायण्यै नमः ॥', access:'Eco-bus circuit around Lake during season.' },
+      { id:'s17', name:'Hinglaj Mata (Nani Mandir)', cat:'SHAKTI_PEETHA', lat:25.5110, lng:65.5170, state:'Balochistan', loc:'Hingol National Park, Makran Coast', deity:'Maa Hinglaj (Kottari)', bhairav:'Bhimlochan Bhairava', sig:'Brahmarandhra / Crown of the Head of Sati.', source:'Tantrachudamani & Chandi Charitra', arch:'Natural mud-rock cave within volcanic canyon', era:'Visited by Sri Rama after Lanka victory', purana:'Supreme seat where Devi’s upper crown fell, dissolving all past karmas.', mantra:'ॐ ह्रीं श्रीं क्लीं हिंगुलाज देव्यै नमः ॥', access:'Coastal highway paved road, canyon path.' },
+      { id:'s18', name:'Ambaji (Arasur Hill)', cat:'SHAKTI_PEETHA', lat:24.3315, lng:72.8519, state:'Gujarat', loc:'Gabbar Hill, Banaskantha', deity:'Maa Ambe (Worshipped as Visa Yantra)', bhairav:'Batuk Bhairava', sig:'Heart of Devi Sati.', source:'Tantrachudamani & Skanda Purana', arch:'White marble Nagara architectural splendor', era:'Chaulukya dynasty', purana:'Sacred Heart of Sati; worshipped through the consecrated golden Visa Yantra.', mantra:'ॐ श्रीं ह्रीं क्लीं अम्बिकायै नमः ॥', access:'Gabbar hill ropeway, non-slip marble carpets.' },
+      { id:'s19', name:'Kolhapur Mahalakshmi', cat:'SHAKTI_PEETHA', lat:16.6946, lng:74.2238, state:'Maharashtra', loc:'Kolhapur (Karvir Kshetra)', deity:'Goddess Mahalakshmi (Ambabai)', bhairav:'Krodhish Bhairava', sig:'Eyes / Triple Form (Kali, Lakshmi, Saraswati).', source:'Mahalakshmi Ashtakam & Padma Purana', arch:'Hemadpanthi basalt stone with solar alignment', era:'Chalukya (7th c.) & Silaharas', purana:'Sun rays illuminate the deity’s face directly during the biannual Kiranotsav.', mantra:'नमस्तेऽस्तु महामाये श्रीपीठे सुरपूजिते ॥', access:'Dedicated ramped gates, senior darshan passes.' },
+      { id:'s20', name:'Tuljabhavani Temple', cat:'SHAKTI_PEETHA', lat:18.0069, lng:76.0718, state:'Maharashtra', loc:'Tuljapur, Osmanabad', deity:'Maa Tulja Bhavani', bhairav:'Kameshwar Bhairava', sig:'Heart / Right Cheek of Devi Sati.', source:'Markandeya Purana & Skanda Purana', arch:'Hemadpanthi style with sacred kunds', era:'Kadamba, Yadava & Shivaji Maharaj eras', purana:'Maa Bhavani personally gifted the divine sword to Chhatrapati Shivaji Maharaj.', mantra:'ॐ श्री तुलजाभवान्यै नमः ॥', access:'Spacious pradakshina marg, ramp at Mahadwar.' },
+      { id:'s21', name:'Kanchi Kamakshi Amman', cat:'SHAKTI_PEETHA', lat:12.8406, lng:79.7032, state:'Tamil Nadu', loc:'Kanchipuram (Odyana Peetha)', deity:'Goddess Kamakshi (Sri Rajarajeshwari)', bhairav:'Sri Chakra consecrated by Shankara', sig:'Navel / Bone (Odyana Peetha; heart of Sri Vidya).', source:'Lalita Sahasranama & Saundarya Lahari', arch:'Dravidian with Golden Vimana', era:'Pallavas, Cholas, and Adi Shankara', purana:'Adi Shankaracharya pacified the fierce form by consecrating the Sri Chakra.', mantra:'कामाक्षीं करुणापूर्णां । ॐ श्रीमात्रे नमः ॥', access:'Level stone parikramas, wheelchairs at office.' },
+      { id:'s22', name:'Madurai Meenakshi', cat:'SHAKTI_PEETHA', lat:9.9195, lng:78.1193, state:'Tamil Nadu', loc:'Madurai, Vaigai River', deity:'Goddess Meenakshi', bhairav:'Sundareswarar (Soma Sundara)', sig:'Twin Eyes (Fish-shaped eyes of unbounded grace).', source:'Thiruvilaiyadal Puranam', arch:'Pinnacle of Nayaka Dravidian with 14 Gopurams', era:'Rebuilt by Vishwanatha Nayak (16th c.)', purana:'Born from holy sacrificial fire to King Malayadhwaja Pandya; ruled Madurai as queen.', mantra:'ॐ श्री मीनाक्षीसुन्दरेश्वराभ्यां नमः ॥', access:'Battery buggies within complex, priority elderly line.' },
+      { id:'s23', name:'Chamundeshwari (Mysuru)', cat:'SHAKTI_PEETHA', lat:12.2727, lng:76.6706, state:'Karnataka', loc:'Chamundi Hills, Mysuru', deity:'Goddess Chamundeshwari', bhairav:'Mahabaleshwara Bhairava', sig:'Hair (Kesha Peetha) / Divine Ears.', source:'Devi Mahatmya & Skanda Purana', arch:'Seven-tier Dravidian Gopuram', era:'Hoysalas (12th c.) & Wodeyars (17th c.)', purana:'Slain the buffalo-demon Mahishasura on this hill, establishing peace in Mahishuru.', mantra:'ॐ चामुण्डायै नमः ॥', access:'Direct hilltop road with parking, ramps.' },
+      { id:'s24', name:'Jogulamba (Alampur)', cat:'SHAKTI_PEETHA', lat:15.8797, lng:78.1287, state:'Telangana', loc:'Tungabhadra-Krishna Sangam', deity:'Goddess Jogulamba (Yogamba)', bhairav:'Bala Brahmeswara Bhairava', sig:'Upper Teeth of Devi Sati.', source:'Tantrachudamani & Skanda Purana', arch:'Badami Chalukya Nagara hybrid with Navabrahma shrines', era:'Western Chalukyas (7th c.)', purana:'Protector of the sacred confluence and guardian of ascetic yogis.', mantra:'ॐ जोगुलाम्बा देव्यै नमः ॥', access:'Flat riverbank temple grounds.' },
+      { id:'s25', name:'Srisailam Bhramaramba', cat:'SHAKTI_PEETHA', lat:16.0740, lng:78.8687, state:'Andhra Pradesh', loc:'Nallamala Hills, Srisailam', deity:'Goddess Bhramarambika (Mother of Golden Bees)', bhairav:'Mallikarjuna Jyotirlinga', sig:'Neck (Griva Peetha) of Sati.', source:'Devi Bhagavata & Lalita Sahasranama', arch:'Vijayanagara courtyard in Mallikarjuna complex', era:'Visited by Adi Shankaracharya', purana:'Devi assumed the form of countless bees (Bhramara) to exterminate demon Arunasura.', mantra:'चाञ्चल्यमरुणालोचनं । ॐ भ्रमराम्बिकायै नमः ॥', access:'Shared priority senior lines & elevators.' },
+      { id:'s26', name:'Manikarnika & Vishalakshi', cat:'SHAKTI_PEETHA', lat:25.3105, lng:83.0125, state:'Uttar Pradesh', loc:'Meer Ghat, Varanasi', deity:'Goddess Vishalakshi', bhairav:'Kaal Bhairav', sig:'Earring (Manikarnika) & Eyes.', source:'Kashi Khanda & Tantrachudamani', arch:'South Indian style gopuram inside Kashi lanes', era:'Ancient; renovated 1908 by Chettiars', purana:'Sati’s divine jewel earring fell as Shiva danced in grief with her sacred form.', mantra:'ॐ विशालाक्ष्यै नमः ॥', access:'Kashi Vishwanath Dham lane or boat to Meer Ghat.' },
+      { id:'s27', name:'Alopi Devi (Prayagraj)', cat:'SHAKTI_PEETHA', lat:25.4385, lng:81.8753, state:'Uttar Pradesh', loc:'Alopibagh near Sangam', deity:'Alopi Mata (Formless on Wooden Doli)', bhairav:'Mahananda Bhairava', sig:'Fingers / Last remnant of Sati disappeared (Alopa) here.', source:'Tantrachudamani & Matsya Purana', arch:'North Indian temple with central sanctum pool', era:'Ancient Prayag Mahatmya', purana:'Here the remaining form of Devi disappeared into the transcendent Void (Alopa).', mantra:'ॐ अलोपायै नमः ॥', access:'Single-level courtyard, paved access road.' },
+      { id:'s28', name:'Vindhyavasini (Vindhyachal)', cat:'SHAKTI_PEETHA', lat:25.1633, lng:82.5025, state:'Uttar Pradesh', loc:'Mirzapur, Ganga River', deity:'Goddess Vindhyavasini (Kajali Devi)', bhairav:'Ruru Bhairava', sig:'Sacred Waistband / Left Arm.', source:'Harivamsa & Durga Saptashati', arch:'Grand Vindhya Corridor in Nagara sandstone', era:'Revered from Mahabharata era; Yogamaya', purana:'The sister of Krishna who slipped from Kansa’s grasp and chose to dwell on the Vindhya range.', mantra:'ॐ ह्रीं श्रीं क्लीं विन्ध्यवासिन्यै नमः ॥', access:'Vindhya Dham corridor with escalators & ramps.' },
+      { id:'s29', name:'Danteshwari Temple', cat:'SHAKTI_PEETHA', lat:18.8924, lng:81.3486, state:'Chhattisgarh', loc:'Dantewada, Shankini-Dhankini Sangam', deity:'Maa Danteshwari (Kuldevi of Bastar)', bhairav:'Kapalbhairava', sig:'Tooth (Danta Peetha) of Sati.', source:'Tantrachudamani & Kakatiya chronicles', arch:'Bastar tribal-Nagara wooden and stone architecture', era:'Kakatiya King Annam Deo (14th c.)', purana:'The tooth of Sati fell at this confluence; patron goddess of Bastar Dussehra.', mantra:'ॐ दन्तेश्वर्यै नमः ॥', access:'Riverbank temple, zero steps in outer mandapa.' },
+      { id:'s30', name:'Tripurasundari (Matabari)', cat:'SHAKTI_PEETHA', lat:23.5137, lng:91.5002, state:'Tripura', loc:'Udaipur, Kalyan Sagar Lake', deity:'Maa Tripurasundari (Kurma Peetha)', bhairav:'Tripuresh Bhairava', sig:'Right Leg / Foot of Sati.', source:'Kalika Purana & Tantrachudamani', arch:'Bengal-Tripura Buddhist-Chala hybrid dome', era:'Maharaja Dhanya Manikya (1501 CE)', purana:'Temple rests on a hill resembling the back of a tortoise (Kurma Peetha).', mantra:'ॐ ऐं ह्रीं श्रीं त्रिपुरसुन्दर्यै नमः ॥', access:'Lakeview promenade, paved ramp approach.' },
+      { id:'s31', name:'Chhinnamasta (Rajrappa)', cat:'SHAKTI_PEETHA', lat:23.6322, lng:85.7144, state:'Jharkhand', loc:'Damodar-Bhairavi Confluence, Ramgarh', deity:'Maa Chhinnamasta', bhairav:'Rudra Bhairava', sig:'Severed Head / Third Eye (Transcendence of ego).', source:'Pranatosani & Shaktisangama Tantra', arch:'Tantric stone temple atop rocky river bluffs', era:'Ancient Mahavidya seat', purana:'Devi decapitated herself to nourish her attendants with her own blood-currents.', mantra:'ॐ श्रीं ह्रीं क्लीं ऐं वज्र वैरोचनीये हुं हुं फट् ॥', access:'Ramped river bridge, designated queue lines.' },
+      { id:'s32', name:'Baidyanath Jaya Durga', cat:'SHAKTI_PEETHA', lat:24.4927, lng:86.7003, state:'Jharkhand', loc:'Deoghar', deity:'Maa Jaya Durga', bhairav:'Vaidyanath Jyotirlinga', sig:'Heart / Chita-Bhumi of Sati.', source:'Shiva Purana & Tantrachudamani', arch:'Inside Baidyanath temple complex', era:'Linked with Ravana and Adi Shankaracharya', purana:'Connected to Vaidyanath temple via sacred red ribbons (Gathbandhan) tied between domes.', mantra:'ॐ जयदुर्गायै नमः ॥', access:'Shared priority access with Vaidyanath Temple.' },
+      { id:'s33', name:'Kiriteshwari (Murshidabad)', cat:'SHAKTI_PEETHA', lat:24.2014, lng:88.2396, state:'West Bengal', loc:'Nabagram, Murshidabad', deity:'Maa Kiriteshwari (Mukuteshwari)', bhairav:'Samvarta Bhairava', sig:'Crown (Kirit / Mukuta) of Devi Sati.', source:'Tantrachudamani & Ain-i-Akbari', arch:'Terracotta brick pavilion in heritage village', era:'Best Tourism Village 2023; Darpanarayan Ray', purana:'The celestial diadem / crown of Sati fell here.', mantra:'ॐ किरीटेश्वर्यै नमः ॥', access:'Peaceful garden grounds, step-free access.' },
+      { id:'s34', name:'Kankalitala Temple', cat:'SHAKTI_PEETHA', lat:23.6708, lng:87.7214, state:'West Bengal', loc:'Bolpur Santiniketan, Kopai River', deity:'Maa Kankali', bhairav:'Ruru Bhairava', sig:'Waist / Pelvis (Kankala) of Sati.', source:'Tantrachudamani', arch:'Rural Bengal Chala shrine beside Kundam', era:'Ancient; revered in Santiniketan lore', purana:'The pelvic bone / waist fell into the sacred pond, which never dries up.', mantra:'ॐ कङ्काल्यै नमः ॥', access:'Lush shady walkways, flat terrain.' },
+      { id:'s35', name:'Attahas Shakti Peetha', cat:'SHAKTI_PEETHA', lat:23.6333, lng:88.0833, state:'West Bengal', loc:'Labhpur / Katwa, Birbhum', deity:'Goddess Phullara', bhairav:'Vishvesh Bhairava', sig:'Lips of Sati (Divine cosmic laughter - Attahasa).', source:'Tantrachudamani & Kalika Purana', arch:'Bengal brick structure nestled by sacred pond', era:'Ancient Tantric heritage site', purana:'Devi’s lower lip fell here while she uttered a triumphant cosmic laughter.', mantra:'ॐ फुल्लरायै नमः ॥', access:'Ramped approach, tranquil natural ambiance.' },
+      { id:'s36', name:'Nalhati (Nalateshwari)', cat:'SHAKTI_PEETHA', lat:24.2982, lng:87.8285, state:'West Bengal', loc:'Nalhati, Birbhum', deity:'Maa Nalateshwari', bhairav:'Yogesh Bhairava', sig:'Throat / Vocal Cord (Nala) of Sati.', source:'Tantrachudamani', arch:'Terracotta style temple on scenic hillock', era:'Raja Ramkrishna Roy (18th c.)', purana:'Devi’s vocal tract fell here; devotees pray for eloquence and pure speech.', mantra:'ॐ नलाटेश्वर्यै नमः ॥', access:'Gentle stairs with railing, shaded pavilions.' },
+      { id:'s37', name:'Bahula Temple (Ketugram)', cat:'SHAKTI_PEETHA', lat:23.6847, lng:88.0463, state:'West Bengal', loc:'Burdwan, Ajay River', deity:'Goddess Bahula', bhairav:'Bhiruk Bhairava', sig:'Left Arm of Sati.', source:'Tantrachudamani', arch:'Terracotta rural Bengal temple', era:'Medieval heritage site', purana:'Devi Bahula bestows courage and removes fear of accidents.', mantra:'ॐ बहुलायै नमः ॥', access:'Flat access path, quiet courtyard.' },
+      { id:'s38', name:'Ujani Mangalkot Peetha', cat:'SHAKTI_PEETHA', lat:23.5415, lng:88.0847, state:'West Bengal', loc:'Mangalkot, Burdwan, Ajay River', deity:'Goddess Mangala Chandi', bhairav:'Kapilambar Bhairava', sig:'Right Wrist of Sati.', source:'Chandimangal & Tantrachudamani', arch:'At-Chala terracotta architecture', era:'Merchant Dhanapati in Mangalkavya lore', purana:'The golden wrist of Devi fell here, celebrated throughout Bengali literature.', mantra:'ॐ मङ्गलचण्डिकायै नमः ॥', access:'Single-storey floor, parking near gate.' },
+      { id:'s39', name:'Bargabhima (Tamluk)', cat:'SHAKTI_PEETHA', lat:22.2986, lng:87.9254, state:'West Bengal', loc:'Tamluk (Ancient Tamralipta port)', deity:'Maa Bargabhima (Bhimakali)', bhairav:'Sarvananda Bhairava', sig:'Left Ankle of Sati.', source:'Matsya Purana & Tantrachudamani', arch:'Ancient Kalinga-influenced Rekha Deul', era:'Documented by Fa-Hien and Xuanzang', purana:'The ankle fell here; ancient merchants prayed before sailing across the Indian Ocean.', mantra:'ॐ वर्गभीमायै नमः ॥', access:'Paved access road, flat inner courtyard.' },
+      { id:'s40', name:'Patan Devi (Patneshwari)', cat:'SHAKTI_PEETHA', lat:25.6022, lng:85.1950, state:'Bihar', loc:'Patna (Pataliputra)', deity:'Maa Bari Patan Devi', bhairav:'Bhairav guardian', sig:'Right Thigh of Devi Sati.', source:'Tantrachudamani & Kalika Purana', arch:'North Indian Nagara style shrine with marble sanctum', era:'Ancient Pataliputra; Chandragupta & Ashoka lore', purana:'Devi Sati’s right thigh fell in ancient Pataliputra, establishing Patneshwari as guardian.', mantra:'ॐ पाटनेश्वर्यै नमः ॥', access:'Wide entrance gate, wheelchair ramps.' },
+      { id:'s41', name:'Mithila Uchchaith Durga', cat:'SHAKTI_PEETHA', lat:26.4716, lng:85.8564, state:'Bihar', loc:'Benipatti, Madhubani', deity:'Maa Uma / Vanadurga', bhairav:'Mahodara Bhairava', sig:'Left Shoulder of Devi Sati.', source:'Tantrachudamani & Skanda Purana', arch:'Mithila courtyard shrine with Madhubani art', era:'Where Mahakavi Kalidasa was blessed with poetic wisdom', purana:'Kalidasa cut his tongue in reverence; the Goddess restored it and granted poetic brilliance.', mantra:'ॐ उमादेव्यै नमः ॥', access:'Tree-shaded rural walkways, level entry.' },
+      { id:'s42', name:'Harsiddhi Mata (Ujjain)', cat:'SHAKTI_PEETHA', lat:23.1812, lng:75.7645, state:'Madhya Pradesh', loc:'Rudra Sagar Lake, Ujjain', deity:'Maa Harsiddhi (Riddhisiddhi)', bhairav:'Lambkarna Bhairava', sig:'Elbow of Devi Sati.', source:'Shiva Purana & Skanda Purana', arch:'Maratha style with two 50-ft Deepa Stambhas (1,008 oil lamps)', era:'King Vikramaditya worshipped Harsiddhi as chief patron', purana:'Lord Shiva named her Harsiddhi because she bestowed joyful accomplishment upon the universe.', mantra:'ॐ ह्रीं हरसिद्धये नमः ॥', access:'Included in Mahakal Lok complex; golf cart & ramp access.' },
+      { id:'s43', name:'Sharda Devi (Maihar)', cat:'SHAKTI_PEETHA', lat:24.2690, lng:80.7580, state:'Madhya Pradesh', loc:'Trikuta Hill, Maihar (Satna)', deity:'Maa Sharda (Saraswati)', bhairav:'Bhairav protector (Alha-Udal lore)', sig:'Necklace (Maihar = Mai Ka Haar / Mother’s Necklace).', source:'Tantrachudamani', arch:'Hilltop shrine with 1,063 stone steps & ropeway', era:'Alha and Udal performed morning puja here for 12 years', purana:'Devi Sati’s golden pearl necklace fell on Trikuta hill.', mantra:'ॐ शारदायै नमः ॥', access:'Modern aerial ropeway directly to hilltop.' },
+      { id:'s44', name:'Kurukshetra Bhadrakali', cat:'SHAKTI_PEETHA', lat:29.9723, lng:76.8488, state:'Haryana', loc:'Thanesar, Kurukshetra', deity:'Maa Bhadrakali', bhairav:'Sthanu Bhairava', sig:'Right Ankle of Devi Sati.', source:'Tantrachudamani & Mahabharata', arch:'Red stone North Indian temple with ceremonial horse statues', era:'Pandavas prayed here and offered clay horses before Mahabharata war', purana:'Sri Krishna and the Pandavas took vows of righteous victory before Bhadrakali.', mantra:'ॐ भद्रकाल्यै नमः ॥', access:'Wheelchair access ramp, wide open praangan.' },
+      { id:'s45', name:'Maya Devi Temple (Haridwar)', cat:'SHAKTI_PEETHA', lat:29.9463, lng:78.1610, state:'Uttarakhand', loc:'Haridwar (Mayapuri), Upper Ganga Canal', deity:'Goddess Maya Devi', bhairav:'Anandabhairava', sig:'Navel & Heart of Sati.', source:'Skanda Purana (Kedara Khanda)', arch:'Ancient stone temple with three-headed murti', era:'11th century CE; ancient Siddhpeetha', purana:'Haridwar is also known as Mayapuri in honoring Maya Devi’s ancient throne.', mantra:'ॐ मायादेव्यै नमः ॥', access:'Direct street entrance, zero steep inclines.' },
+      { id:'s46', name:'Lalita Devi (Naimisharanya)', cat:'SHAKTI_PEETHA', lat:27.3480, lng:80.4855, state:'Uttar Pradesh', loc:'Naimisharanya, Sitapur, Gomti River', deity:'Maa Lalita Tripurasundari', bhairav:'Bhairav shrine at Chakra Tirtha', sig:'Heart of Devi Sati.', source:'Devi Bhagavata & Skanda Purana', arch:'Classical courtyard beside sacred Chakra Tirtha kund', era:'Where 88,000 rishis performed the 1,000-year Satra yajna', purana:'Manifested to calm the overwhelming velocity of Brahma’s cosmic disc.', mantra:'ॐ श्रीं ह्रीं क्लीं ललितायै नमः ॥', access:'Shaded pradakshina, step-free access around Chakra Tirtha.' },
+      { id:'s47', name:'Draksharamam Manikyamba', cat:'SHAKTI_PEETHA', lat:16.7937, lng:82.0628, state:'Andhra Pradesh', loc:'Konaseema, Godavari Delta', deity:'Goddess Manikyamba', bhairav:'Bhimeswara Swamy (Pancharama)', sig:'Left Cheek of Devi Sati.', source:'Skanda Purana & Bhimeswara Purana', arch:'Two-storey Eastern Chalukyan complex (9th c. CE)', era:'Built by King Chalukya Bhima I (892–922 CE)', purana:'Renowned as one of the Five Sacred Pancharama Kshetras of Shiva.', mantra:'ॐ माणिक्याम्बायै नमः ॥', access:'Ground level pathways, priority queue.' },
+      { id:'s48', name:'Sugandha (Shikarpur)', cat:'SHAKTI_PEETHA', lat:22.7100, lng:90.3500, state:'Barisal (Bangladesh)', loc:'Sunanda River, Shikarpur', deity:'Goddess Sugandha (Sunanda)', bhairav:'Tryambak Bhairava', sig:'Nose of Devi Sati.', source:'Tantrachudamani', arch:'Traditional stone temple on river bank', era:'Ancient Bengal Shakta Peetha', purana:'Devi’s nose fell here, blessing the river with divine floral fragrance.', mantra:'ॐ सुगन्धायै नमः ॥', access:'Local temple trust riverbank pathways.' },
+      { id:'s49', name:'Chattal Bhabanipur Peetha', cat:'SHAKTI_PEETHA', lat:22.6300, lng:91.8300, state:'Chittagong (Bangladesh)', loc:'Chandranath Hill, Sitakunda', deity:'Goddess Bhavani', bhairav:'Chandrasekhar Bhairava', sig:'Right Arm of Devi Sati.', source:'Tantrachudamani & Matsya Purana', arch:'Hilltop shrine amid natural thermal springs', era:'Ancient pilgrimage on Chandranath Peak', purana:'Right arm of Sati fell atop Chandranath peak.', mantra:'ॐ भवान्यै नमः ॥', access:'Paved trail with resting pavilions.' },
+      { id:'s50', name:'Yashoreshwari (Ishwaripur)', cat:'SHAKTI_PEETHA', lat:22.3167, lng:89.0667, state:'Satkhira (Bangladesh)', loc:'Shyamnagar, Ishwaripur', deity:'Maa Yashoreshwari', bhairav:'Chanda Bhairava', sig:'Hands & Feet of Devi Sati.', source:'Tantrachudamani', arch:'100-door Natmandir terracotta pavilion', era:'King Pratapaditya of Jessore (16th c.)', purana:'General of the divine armies; protected the Jessore kingdom.', mantra:'ॐ यशोर्यै नमः ॥', access:'Spacious flat complex, newly renovated community center.' },
+      { id:'s51', name:'Kanya Kumari (Bhagavathy)', cat:'SHAKTI_PEETHA', lat:8.0780, lng:77.5550, state:'Tamil Nadu', loc:'Confluence of 3 Oceans', deity:'Goddess Kanya Kumari (The Virgin Goddess)', bhairav:'Nimisha Bhairava (Sthanumalayan Temple)', sig:'Back / Spine of Devi Sati.', source:'Taittiriya Aranyaka & Silappatikaram', arch:'Dravidian seaside temple facing ocean confluence', era:'Sangam literature & 1st-century CE Greek travelogues', purana:'The youthful Goddess did severe penance to marry Shiva; vanquished demon Banasura.', mantra:'कात्यायनाय विद्महे कन्याकुमारि धीमहि ॥', access:'Smooth seaside corridors, wheelchair ramps, battery carts.' }
+    ];
+
+    // Custom Icon Generator
+    function getMarkerIcon(cat) {
+      const isJyo = cat === 'JYOTIRLINGA';
+      const pinClass = isJyo ? 'pin-jyo' : 'pin-sp';
+      const symbol = isJyo ? '🔱' : '🌺';
+
+      return L.divIcon({
+        className: 'sacred-marker-icon',
+        html: `
+          <div class="sacred-pin ${pinClass}">
+            <div class="pin-symbol">${symbol}</div>
+          </div>
+        `,
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+        popupAnchor: [0, -30]
+      });
+    }
+
+    let markers = [];
+    let currentFilter = 'ALL';
+    let searchQuery = '';
+
+    function renderMarkers() {
+      // Clear existing
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      const filtered = TIRTHAS.filter(t => {
+        const matchesCategory = currentFilter === 'ALL' || t.cat === currentFilter;
+        const q = searchQuery.toLowerCase().trim();
+        const matchesSearch = !q ||
+          t.name.toLowerCase().includes(q) ||
+          t.state.toLowerCase().includes(q) ||
+          t.loc.toLowerCase().includes(q) ||
+          t.deity.toLowerCase().includes(q) ||
+          t.sig.toLowerCase().includes(q);
+
+        return matchesCategory && matchesSearch;
+      });
+
+      document.getElementById('siteCount').innerText = `Showing ${filtered.length} sites`;
+
+      filtered.forEach(t => {
+        const marker = L.marker([t.lat, t.lng], { icon: getMarkerIcon(t.cat) });
+
+        // Popup HTML
+        const popupContent = `
+          <div style="font-family:'Cormorant Garamond', serif; min-width: 180px;">
+            <div style="font-size:0.75rem; font-weight:bold; color:${t.cat==='JYOTIRLINGA'?'#B78103':'#C2185B'}">
+              ${t.cat==='JYOTIRLINGA' ? '🔱 12 DWADASHA JYOTIRLINGA' : '🌺 51 MAHA SHAKTI PEETHA'}
+            </div>
+            <div style="font-size:1.05rem; font-weight:bold; color:#4A0E17; margin:2px 0;">${t.name}</div>
+            <div style="font-size:0.8rem; color:#666;">📍 ${t.loc}, ${t.state}</div>
+            <div style="font-size:0.8rem; margin-top:4px;"><strong>Deity:</strong> ${t.deity}</div>
+            <button onclick="showDetail('${t.id}')" style="margin-top:6px; background:#4A0E17; color:#FFFBF5; border:none; padding:3px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-family:inherit;">View Details →</button>
+          </div>
+        `;
+
+        marker.bindPopup(popupContent);
+        marker.on('click', () => showDetail(t.id));
+        marker.addTo(map);
+        markers.push(marker);
+      });
+    }
+
+    function setFilter(cat) {
+      currentFilter = cat;
+      document.getElementById('btn-all').classList.toggle('active', cat === 'ALL');
+      document.getElementById('btn-jyo').classList.toggle('active', cat === 'JYOTIRLINGA');
+      document.getElementById('btn-sp').classList.toggle('active', cat === 'SHAKTI_PEETHA');
+      renderMarkers();
+    }
+
+    function handleSearch(val) {
+      searchQuery = val;
+      renderMarkers();
+    }
+
+    let activeDetailTirtha = null;
+
+    function showDetail(id) {
+      const t = TIRTHAS.find(item => item.id === id);
+      if (!t) return;
+
+      activeDetailTirtha = t;
+
+      // Stop any active audio narration when switching cards
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      resetAudioBtn();
+
+      const card = document.getElementById('detailCard');
+      const badge = document.getElementById('detailBadge');
+      const isJyo = t.cat === 'JYOTIRLINGA';
+
+      badge.innerText = isJyo ? '🔱 12 Dwadasha Jyotirlinga' : '🌺 51 Maha Shakti Peetha';
+      badge.className = 'badge ' + (isJyo ? 'badge-jyo' : 'badge-sp');
+
+      document.getElementById('detailTitle').innerText = t.name;
+      document.getElementById('detailLoc').innerText = `📍 ${t.loc}, ${t.state} (${t.lat.toFixed(4)}° N, ${t.lng.toFixed(4)}° E)`;
+      document.getElementById('detailDeity').innerText = t.deity;
+
+      const bhairavBox = document.getElementById('detailBhairavBox');
+      if (t.bhairav) {
+        bhairavBox.style.display = 'block';
+        document.getElementById('detailBhairav').innerText = t.bhairav;
+      } else {
+        bhairavBox.style.display = 'none';
+      }
+
+      document.getElementById('detailSignificance').innerText = t.sig;
+      document.getElementById('detailPurana').innerText = t.purana;
+      document.getElementById('detailSource').innerText = t.source;
+      document.getElementById('detailArch').innerText = `${t.arch} (${t.era})`;
+      document.getElementById('detailMantra').innerText = t.mantra;
+      document.getElementById('detailAccess').innerText = t.access;
+
+      const navBtn = document.getElementById('detailNavBtn');
+      navBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${t.lat},${t.lng}`;
+
+      card.style.display = 'block';
+
+      // Pan to marker smoothly
+      map.flyTo([t.lat, t.lng], 8, { duration: 1.2 });
+    }
+
+    function closeDetailCard() {
+      // Stop speech playback on close
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      resetAudioBtn();
+      activeDetailTirtha = null;
+      document.getElementById('detailCard').style.display = 'none';
+    }
+
+    // Web Speech API: Audio Tour Reader for Sthala Purana
+    function toggleAudioTour() {
+      if (!('speechSynthesis' in window)) {
+        alert("Web Speech API is not supported in this browser. Please try Chrome, Edge, Safari, or Firefox.");
+        return;
+      }
+
+      const synth = window.speechSynthesis;
+
+      // If already speaking, cancel playback (toggle off)
+      if (synth.speaking) {
+        synth.cancel();
+        resetAudioBtn();
+        return;
+      }
+
+      if (!activeDetailTirtha) return;
+
+      const btn = document.getElementById('audioTourBtn');
+      const icon = document.getElementById('audioTourIcon');
+      const text = document.getElementById('audioTourText');
+
+      // Curate serene, respectful pilgrimage audio narration text
+      const speechScript = `Audio tour for ${activeDetailTirtha.name}, situated in ${activeDetailTirtha.loc}, ${activeDetailTirtha.state}. Presiding deity is ${activeDetailTirtha.deity}. Spiritual significance: ${activeDetailTirtha.sig}. Sthala Purana history: ${activeDetailTirtha.purana}. Canonical textual authority: ${activeDetailTirtha.source}. Prescribed sacred mantra: ${activeDetailTirtha.mantra}. Architecture and era: ${activeDetailTirtha.arch}, ${activeDetailTirtha.era}. Accessibility notes: ${activeDetailTirtha.access}.`;
+
+      const utterance = new SpeechSynthesisUtterance(speechScript);
+      utterance.rate = 0.92; // Slightly measured, respectful tempo
+      utterance.pitch = 1.0;
+
+      // Try selecting a natural Indian English voice if present, fallback to default English
+      const voices = synth.getVoices();
+      const preferredVoice = voices.find(v => v.lang === 'en-IN') ||
+                             voices.find(v => v.lang.startsWith('en'));
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+
+      utterance.onstart = () => {
+        if (btn) btn.classList.add('speaking');
+        if (icon) icon.innerText = '⏹️';
+        if (text) text.innerText = 'Stop Audio';
+      };
+
+      utterance.onend = () => {
+        resetAudioBtn();
+      };
+
+      utterance.onerror = (e) => {
+        console.warn("Speech synthesis error:", e);
+        resetAudioBtn();
+      };
+
+      synth.speak(utterance);
+    }
+
+    function resetAudioBtn() {
+      const btn = document.getElementById('audioTourBtn');
+      const icon = document.getElementById('audioTourIcon');
+      const text = document.getElementById('audioTourText');
+      if (btn) btn.classList.remove('speaking');
+      if (icon) icon.innerText = '🔊';
+      if (text) text.innerText = 'Audio Tour';
+    }
+
+    function closeClosestModal() {
+      document.getElementById('closestModal').style.display = 'none';
+    }
+
+    // Haversine Distance Calculation (km)
+    function getDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return Math.round(R * c * 10) / 10;
+    }
+
+    let userGpsMarker = null;
+
+    // Geolocation API to find 3 closest tirthas
+    function findClosestTirthas() {
+      const btn = document.getElementById('btn-geo');
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+
+      btn.innerText = "⏳ Finding GPS...";
+      btn.style.opacity = "0.75";
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          btn.innerText = "📍 Find 3 Closest Tirthas";
+          btn.style.opacity = "1";
+
+          const uLat = pos.coords.latitude;
+          const uLng = pos.coords.longitude;
+
+          // Add or update User Location marker
+          if (userGpsMarker) map.removeLayer(userGpsMarker);
+          const userIcon = L.divIcon({
+            className: 'user-marker',
+            html: `<div style="width:22px;height:22px;border-radius:50%;background:#1E88E5;border:3px solid #FFF;box-shadow:0 0 12px rgba(30,136,229,0.9);"></div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+          });
+          userGpsMarker = L.marker([uLat, uLng], { icon: userIcon })
+            .addTo(map)
+            .bindPopup("<div style='font-family:serif;font-weight:bold;color:#1565C0;'>📍 Your GPS Position</div>")
+            .openPopup();
+
+          // Calculate distance to all tirthas
+          const withDist = TIRTHAS.map(t => ({
+            ...t,
+            distanceKm: getDistanceKm(uLat, uLng, t.lat, t.lng)
+          }));
+
+          withDist.sort((a, b) => a.distanceKm - b.distanceKm);
+          const top3 = withDist.slice(0, 3);
+
+          // Populate modal
+          document.getElementById('closestGpsInfo').innerText = `Your Location: ${uLat.toFixed(3)}° N, ${uLng.toFixed(3)}° E`;
+
+          const listContainer = document.getElementById('closestList');
+          listContainer.innerHTML = '';
+
+          top3.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#FFF; padding:10px; border-radius:8px; border:1px solid #E0D7C6; box-shadow:0 1px 4px rgba(0,0,0,0.06);';
+
+            card.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <span style="display:inline-block; width:18px; height:18px; line-height:18px; text-align:center; background:#4A0E17; color:#FFFBF5; border-radius:50%; font-size:10px; font-weight:bold; margin-right:4px;">${index + 1}</span>
+                  <strong style="color:#4A0E17; font-size:0.95rem;">${item.name}</strong>
+                </div>
+                <span style="font-size:0.75rem; font-weight:bold; color:#B78103; background:#FFF8E1; padding:2px 6px; border-radius:4px; border:1px solid #FFE082;">
+                  ${item.distanceKm} km
+                </span>
+              </div>
+              <div style="font-size:0.75rem; color:#666; margin:4px 0;">📍 ${item.loc}, ${item.state}</div>
+              <div style="font-size:0.75rem; color:#333;"><strong>Deity:</strong> ${item.deity}</div>
+              <div style="font-size:0.72rem; color:#8B0000; font-style:italic; margin-top:2px;">${item.sig}</div>
+              <div style="display:flex; gap:6px; margin-top:8px;">
+                <button onclick="showDetail('${item.id}')" style="flex:1; background:#4A0E17; color:#FFFBF5; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-family:inherit; cursor:pointer;">
+                  Inspect →
+                </button>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}" target="_blank" style="padding:4px 8px; background:#FFF8E1; border:1px solid #D4AF37; color:#4A0E17; border-radius:4px; font-size:0.75rem; text-decoration:none; font-weight:bold;">
+                  Directions ↗
+                </a>
+              </div>
+            `;
+            listContainer.appendChild(card);
+          });
+
+          document.getElementById('closestModal').style.display = 'block';
+          map.flyTo([top3[0].lat, top3[0].lng], 7, { duration: 1.2 });
+        },
+        (err) => {
+          btn.innerText = "📍 Find 3 Closest Tirthas";
+          btn.style.opacity = "1";
+          alert("GPS Location Error: " + (err.message || "Permission denied or unavailable"));
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
+    // Initial render
+    renderMarkers();
+  </script>
+</body>
+</html>

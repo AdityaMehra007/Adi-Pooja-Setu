@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             data.preferredLanguage is string && data.preferredLanguage.size() >= 2 && data.preferredLanguage.size() <= 10 &&
+             data.stateRegion is string && data.stateRegion.size() <= 100 &&
+             data.cityName is string && data.cityName.size() <= 100 &&
+             data.calendarConvention is string && data.calendarConvention.size() <= 50 &&
+             data.defaultRoutineMins is int && data.defaultRoutineMins >= 5 && data.defaultRoutineMins <= 120 &&
+             data.seniorAccessibleMode is bool &&
+             (!('familyTraditionNote' in data) || (data.familyTraditionNote is string && data.familyTraditionNote.size() <= 2000)) &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPoojaCompletion(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.poojaSlug is string && data.poojaSlug.size() >= 1 && data.poojaSlug.size() <= 100 &&
+             data.poojaTitle is string && data.poojaTitle.size() >= 1 && data.poojaTitle.size() <= 200 &&
+             data.durationSeconds is int && data.durationSeconds >= 0 && data.durationSeconds <= 86400 &&
+             (!('personalReflection' in data) || (data.personalReflection is string && data.personalReflection.size() <= 2000)) &&
+             data.completedAt is timestamp && data.completedAt <= request.time;
+    }
+
+    function isValidPoojaSchedule(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.poojaSlug is string && data.poojaSlug.size() >= 1 && data.poojaSlug.size() <= 100 &&
+             data.timeOfDay is string && data.timeOfDay.size() >= 4 && data.timeOfDay.size() <= 10 &&
+             data.recurrenceRule is string && data.recurrenceRule.size() >= 1 && data.recurrenceRule.size() <= 50 &&
+             data.isActive is bool &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDisciplineProgress(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.pathwaySlug is string && data.pathwaySlug.size() >= 1 && data.pathwaySlug.size() <= 100 &&
+             data.pathwayTitle is string && data.pathwayTitle.size() >= 1 && data.pathwayTitle.size() <= 200 &&
+             data.currentDay is int && data.currentDay >= 1 && data.currentDay <= 365 &&
+             data.streakDays is int && data.streakDays >= 0 && data.streakDays <= 3650 &&
+             data.lastCompletedAt is timestamp && data.lastCompletedAt <= request.time;
+    }
+
+    function isValidProblemSubmission(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.domain is string && data.domain.size() >= 1 && data.domain.size() <= 100 &&
+             data.userNote is string && data.userNote.size() <= 2000 &&
+             data.practicalReferrals is string && data.practicalReferrals.size() <= 4000 &&
+             data.optionalDevotionalPractice is string && data.optionalDevotionalPractice.size() <= 4000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidCeremonyBooking(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.practitionerId is string && data.practitionerId.size() >= 1 && data.practitionerId.size() <= 100 &&
+             data.practitionerName is string && data.practitionerName.size() >= 1 && data.practitionerName.size() <= 200 &&
+             data.ceremonyTitle is string && data.ceremonyTitle.size() >= 1 && data.ceremonyTitle.size() <= 200 &&
+             data.scheduledDate is string && data.scheduledDate.size() <= 100 &&
+             data.totalAmountInr is int && data.totalAmountInr >= 0 && data.totalAmountInr <= 10000000 &&
+             data.status is string && data.status.size() <= 50 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get, list: if isOwner(userId) && isValidId(userId);
+
+      allow create: if isOwner(userId) && isValidId(userId) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().userId == existing().userId &&
+                       isValidUserProfile(incoming());
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Pooja Completions Subcollection
+      match /pooja_completions/{completionId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(completionId) &&
+                         isValidPoojaCompletion(incoming());
+
+        allow update: if isOwner(userId) && isValidId(completionId) &&
+                         incoming().completedAt == existing().completedAt &&
+                         isValidPoojaCompletion(incoming());
+
+        allow delete: if isOwner(userId) && isValidId(completionId);
+      }
+
+      // Pooja Schedules Subcollection
+      match /schedules/{scheduleId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(scheduleId) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         isValidPoojaSchedule(incoming());
+
+        allow update: if isOwner(userId) && isValidId(scheduleId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidPoojaSchedule(incoming());
+
+        allow delete: if isOwner(userId) && isValidId(scheduleId);
+      }
+
+      // Gurukul Discipline Progress Subcollection
+      match /discipline_progress/{progressId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(progressId) &&
+                         isValidDisciplineProgress(incoming());
+
+        allow update: if isOwner(userId) && isValidId(progressId) &&
+                         isValidDisciplineProgress(incoming());
+
+        allow delete: if isOwner(userId) && isValidId(progressId);
+      }
+
+      // Problem Guidance Subcollection
+      match /problem_guidance/{submissionId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(submissionId) &&
+                         isValidProblemSubmission(incoming());
+
+        allow update: if false; // immutable record of guidance
+
+        allow delete: if isOwner(userId) && isValidId(submissionId);
+      }
+
+      // Ceremony Bookings Subcollection
+      match /bookings/{bookingId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(bookingId) &&
+                         isValidCeremonyBooking(incoming());
+
+        allow update: if isOwner(userId) && isValidId(bookingId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidCeremonyBooking(incoming());
+
+        allow delete: if isOwner(userId) && isValidId(bookingId);
+      }
+    }
+  }
+}

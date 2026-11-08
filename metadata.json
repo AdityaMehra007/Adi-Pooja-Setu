@@ -1,0 +1,6 @@
+{
+  "name": "PoojaSetu",
+  "description": "Daily Pooja companion, astronomical Drik Panchang, verified practitioner marketplace, and SATYA civilisation knowledge engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
